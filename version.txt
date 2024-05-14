@@ -1,0 +1,39 @@
+========================================
+Date : 2024-02-01
+Version : 1.1.0
+
+Update:
+    - jika wd callback terima gagal, maka agent tersebut akan di non-active kan untuk sementara.
+        update file:
+            - appium_callback_wd.php
+
+
+========================================
+Date : 2023-07-05
+Version : 1.0.0
+
+Update:
+    - initial appium
+        update db:
+            - CREATE TABLE appium_transaction (v_id varchar(50), v_title varchar(100), n_amount decimal(18,2), v_trxid varchar(30), d_date datetime, v_account varchar(50), n_futuretrxid bigint, v_user varchar(100), v_phonenumber varchar(30));
+            - CREATE TABLE tbl_command_android (v_phonenumber varchar(30) primary key, n_action int);
+            - CREATE TABLE tbl_otp (v_phonenumber varchar(30), n_smsid int, v_body text, n_isused int, d_insert datetime);
+            - CREATE TABLE tbl_transaction (n_futuretrxid bigint primary key, d_insert datetime, v_merchantcode varchar(32), v_customercode varchar(64)
+            , v_ccy varchar(3), v_bankcode varchar(8), n_amount decimal(18,2), d_timestamp datetime, v_transactiontype char(1), v_status char(1)
+            , v_accountno varchar(32), n_fee decimal(12,4), v_notes varchar(64), v_transactionid varchar(64), v_reference varchar(64), v_urlok varchar(128)
+            , v_urlfail varchar(128), v_dstbankaccountno varchar(32), v_dstaccountname varchar(128), v_notes2 varchar(64), n_parentfuturetrxid bigint
+            , v_sourcebankcode varchar(20), v_finalstatus varchar(1), n_commissionfee decimal(12,4), v_resellerid varchar(100), n_ismanuallybanked tinyint default 0
+            , n_isclienttimenull tinyint default 0, v_sourceaccountname varchar(128), v_ifsc varchar(60), v_notes3 varchar(100), v_phonenumber varchar(30)
+            , v_merchantcallbackresponse text, d_completedate datetime, v_memo varchar(200), n_agentCommissionFee decimal(18,2) default 0, n_isMatchMutasi tinyint default 0
+            , n_isSuccessManually tinyint default 0, d_originaldate datetime, v_agentassign varchar(50), v_assignstatus varchar(1), n_isAmountChange tinyint default 0
+            , d_adjustDate datetime, d_closingDate datetime, flag varchar(25), n_isAdjust tinyint default 0, d_frontDate datetime,n_useappium tinyint default 0
+            , n_ismatchsms tinyint default 0, n_ismatchappium tinyint default 0, INDEX (n_futuretrxid, v_transactionid, v_notes3));
+            - ALTER TABLE tbl_transaction ADD COLUMN d_matchsmsdate datetime, ADD COLUMN d_matchappiumdate datetime;
+            - ALTER TABLE appium_transaction ADD COLUMN v_agentaccountno varchar(30), ADD COLUMN v_bankcode varchar(30);
+            - ALTER TABLE tbl_otp ADD COLUMN v_bankcode varchar(20);
+            - ALTER TABLE tbl_otp ADD COLUMN v_user varchar(100);
+
+            alter table ms_login add column v_bank varchar(30), add column v_userbank varchar(100), add v_pin varchar(30);
+
+            create table otp_log (v_otpid varchar (100) primary key, d_insert datetime, v_user varchar(100), v_content text, v_topic varchar(100), v_status varchar(200));
+
