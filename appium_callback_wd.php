@@ -91,11 +91,21 @@ try {
         $stmt->bindValue(4, $futureTrxId, PDO::PARAM_STR);
         $stmt->execute();
     } else {
-        $query = "UPDATE `transaction` SET v_memo = ? WHERE n_futuretrxid = ?";
-        $stmt = $conn->prepare($query);
-        $stmt->bindValue(1, $description, PDO::PARAM_STR);
-        $stmt->bindValue(2, $futureTrxId, PDO::PARAM_STR);
-        $stmt->execute();
+        if($description != "Insufficient balance. Please check and try again later."){
+            $query = "UPDATE `transaction` SET v_status = ?, v_memo = ?, d_completedate = ?, n_useappium = 1 WHERE n_futuretrxid = ?";
+            $stmt = $conn->prepare($query);
+            $stmt->bindValue(1, $status == 1 ? 0 : 1, PDO::PARAM_STR);
+            $stmt->bindValue(2, $description, PDO::PARAM_STR);
+            $stmt->bindValue(3, date('Y-m-d H:i:s'), PDO::PARAM_STR);
+            $stmt->bindValue(4, $futureTrxId, PDO::PARAM_STR);
+            $stmt->execute();
+        }else{
+            $query = "UPDATE `transaction` SET v_memo = ? WHERE n_futuretrxid = ?";
+            $stmt = $conn->prepare($query);
+            $stmt->bindValue(1, $description, PDO::PARAM_STR);
+            $stmt->bindValue(2, $futureTrxId, PDO::PARAM_STR);
+            $stmt->execute();
+        }
     }
 
     $next = false;
