@@ -91,7 +91,7 @@ try {
         $stmt->bindValue(4, $futureTrxId, PDO::PARAM_STR);
         $stmt->execute();
     } else {
-        if($description != "Insufficient balance. Please check and try again later."){
+        if ($description != "Insufficient balance. Please check and try again later.") {
             $query = "UPDATE `transaction` SET v_status = ?, v_memo = ?, d_completedate = ?, n_useappium = 1 WHERE n_futuretrxid = ?";
             $stmt = $conn->prepare($query);
             $stmt->bindValue(1, $status == 1 ? 0 : 1, PDO::PARAM_STR);
@@ -99,7 +99,7 @@ try {
             $stmt->bindValue(3, date('Y-m-d H:i:s'), PDO::PARAM_STR);
             $stmt->bindValue(4, $futureTrxId, PDO::PARAM_STR);
             $stmt->execute();
-        }else{
+        } else {
             $query = "UPDATE `transaction` SET v_memo = ? WHERE n_futuretrxid = ?";
             $stmt = $conn->prepare($query);
             $stmt->bindValue(1, $description, PDO::PARAM_STR);
@@ -136,7 +136,7 @@ try {
          * @author Rusman.
          * @since v1.1.0 [2024-02-01] add logic
          */
-        if(strtoupper($description) == "UNKNOWN"){
+        if (strtoupper($description) == "UNKNOWN") {
             $query = "SELECT * FROM tbl_agent_wd_queue WHERE v_queueid = ?";
             $stmt = $conn->prepare($query);
             $stmt->bindValue(1, $queueId, PDO::PARAM_STR);
@@ -187,6 +187,15 @@ try {
             $common->WriteLog($logFile, "[$runCode] MERCHANT CALLBACK STATUS: " . $merchantCallback);
         } catch (Exception $ex) {
             $common->WriteLog($logFile, "[$runCode] MERCHANT CALLBACK ERROR: " . $ex->getMessage());
+        }
+    } else {
+        if ($description != "Insufficient balance. Please check and try again later." && $description != "AUTOMATION FAILED: TIME OUT" && $description != "AUTOMATION FAILED: UNKNOWN ERROR") {
+            try {
+                $merchantCallback = $transactionCtrl->ResendCallback($futureTrxId);
+                $common->WriteLog($logFile, "[$runCode] MERCHANT CALLBACK STATUS: " . $merchantCallback);
+            } catch (Exception $ex) {
+                $common->WriteLog($logFile, "[$runCode] MERCHANT CALLBACK ERROR: " . $ex->getMessage());
+            }
         }
     }
 
