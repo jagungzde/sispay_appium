@@ -71,7 +71,6 @@ class Auth
     public function GetMainUser($user)
     {
         try {
-
             $query = "SELECT * FROM ms_login WHERE v_user = ?";
 
             $stmt = $this->connection->prepare($query);
@@ -146,7 +145,6 @@ class Auth
         }
     }
 
-
     public function GetUserOtpSetter($token)
     {
         try {
@@ -160,6 +158,21 @@ class Auth
             if ($stmt->rowCount() > 0) return $stmt->fetch(PDO::FETCH_ASSOC);
             else return false;
         } catch (Exception $e) {
+            throw $e;
+        }
+    }
+
+    public function SetServerName($serverName, $username)
+    {
+        try{
+            $query = "UPDATE ms_login_appium SET v_servername = ? WHERE v_username = ?";
+            $stmt = $this->connection->prepare($query);
+            $stmt->bindValue(1, $serverName, PDO::PARAM_STR);
+            $stmt->bindValue(2, $username, PDO::PARAM_STR);
+            $stmt->execute();
+
+            $stmt = null;
+        }catch(Exception $e){
             throw $e;
         }
     }
