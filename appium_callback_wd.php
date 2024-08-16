@@ -8,6 +8,7 @@ if (stripos($_SERVER["CONTENT_TYPE"], "application/json") == 0) {
 
 include_once "class/common.php";
 include_once "class/database.php";
+include_once "class/mybank.php";
 // include_once "class/databaseAppium.php";
 include_once "config/base.config.php";
 include_once "controllers/transactionCtrl.php";
@@ -23,6 +24,19 @@ $logFile = "./logs/appium_callback_wd_" . date('Y-m-d_H') . ".txt";
 $runCode = "111111";    //default runcode
 
 try {
+
+    $invalid_description = [
+        "Insufficient balance. Please check and try again later.",
+        "AUTOMATION FAILED: TIME OUT",
+        "AUTOMATION FAILED: UNKNOWN ERROR",
+        "Maximum Cash In Credit Monthly Amount",
+        "Your request is restricted from 2 AM till 4 AM. Please try later. Thanks.",
+        "Same transaction request. Please try again later.",
+        "Maximum Cash In Credit Daily Count",
+        "Your session expired. Please login again.",
+        "An exception occurred, Try again",
+        "Insufficient balance"
+    ];
 
     $database = new Database();
     $conn = $database->GetConnection();
@@ -104,8 +118,8 @@ try {
         $stmt->bindValue(4, $futureTrxId, PDO::PARAM_STR);
         $stmt->execute();
     } else {
-        if ($description != "Insufficient balance. Please check and try again later.") {
-            $query = "UPDATE `transaction` SET v_status = ?, v_memo = ?, d_completedate = ?, n_useappium = 1, v_actual_agent = '$user' $additionalUpdate WHERE n_futuretrxid = ?";
+        if (!in_array($description, $invalid_description)) {
+            $query = "UPDATE `transaction` SET v_status = ?, v_memo = ?, d_completedate = ?, n_useappium = 1 WHERE n_futuretrxid = ?";
             $stmt = $conn->prepare($query);
             $stmt->bindValue(1, $status == 1 ? 0 : 1, PDO::PARAM_STR);
             $stmt->bindValue(2, $description, PDO::PARAM_STR);
@@ -209,6 +223,20 @@ try {
             } catch (Exception $ex) {
                 $common->WriteLog($logFile, "[$runCode] MERCHANT CALLBACK ERROR: " . $ex->getMessage());
             }
+        }
+    }
+
+    if ($description == 'Maximum Cash In Credit Monthly Amount' || $description == 'Maximum Cash In Credit Daily Count') {
+        try {
+            $queryUpdate = "UPDATE mybank SET v_isactive = 'N' WHERE v_bankaccountno = ? AND v_bankcode = ?";
+            $stmt = $conn->prepare($queryUpdate);
+            $stmt->bindValue(1, $wdRow['v_accountno'], PDO::PARAM_STR);
+            $stmt->bindValue(2, $wdRow['v_bankcode'], PDO::PARAM_STR);
+            $stmt->execute();
+            $common->WriteLog($logFile, "[$runCode] Bank Inactive: " . $wdRow['v_accountno']);
+            $common->WriteLog($logFile, "[$runCode] Reasson: " . $description);
+        } catch (Exception $e) {
+            throw $e->getMessage();
         }
     }
 

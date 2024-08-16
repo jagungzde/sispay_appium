@@ -11,9 +11,11 @@ include_once __DIR__ . '/../class/database.php';
 include_once __DIR__ . '/../class/auth.php';
 include_once __DIR__ . '/../class/common.php';
 include_once __DIR__ . '/../class/log.php';
+include_once __DIR__ . '/../class/mybank.php';
 
 $username = !empty($_POST['username']) ? $_POST['username'] : $param_POST->username;
 $password = !empty($_POST['password']) ? $_POST['password'] : $param_POST->password;
+// $serverName = !empty($_POST['serverName']) ? $_POST['serverName'] : $param_POST->serverName ;
 // $bank = !empty($_POST['bank']) ? $_POST['bank'] : $param_POST->bank;
 
 // $logFile = __DIR__ . "/../logs/login_appium_" . date('Y-m-d_H') . ".txt";
@@ -22,6 +24,8 @@ $log = null;
 $logDesc = '';
 $res = null;
 
+
+
 try {
 
     $database = new Database();
@@ -29,11 +33,14 @@ try {
 
     $auth = new Auth($conn);
     $log = new Log($conn);
+    $mybank = new Mybank($conn);
     $common = new Common();
+
 
     // $common->WriteLog($logFile, json_encode($param_POST));
 
     $logDes .= "Username: " . $username . ", Password: " . $password . "; ";
+    // $logDes .= "Username: " . $username . ", Password: " . $password . ", sever name = ". $serverName. "; ";
 
     $resLogin = $auth->LoginAppium($username, $password);
     if (count($resLogin) == 0) throw new Exception('Invalid Username or Password');
@@ -43,17 +50,28 @@ try {
 
         $token = $common->CreateToken($username);
         $auth->SetTokenAppium($username, $token);
-
+        // $auth->SetServerName($serverName, $username);
+        
         $mainUser = $row['v_mainuser'];
-
+        
         $mainUserData = $auth->GetMainUser($mainUser);
-        $bank = $row['v_bankcode'];
+        $resMybank = $mybank->GetAccountByUserAndBank($mainUserData['v_phonenumber'], $row['v_bankcode']);
+        
+        foreach ($resMybank as $rowBank) {
+            if ($rowBank["v_emergencyMode"]) {
+                    $emergencyMode = $rowBank["v_emergencyMode"];
+                    break;
+                }
+        }
+
+        $bank = $mainUserData['v_bank'];
         $userBank = $mainUserData['v_userbank'];
-        $pin = $row['v_pin'];
+        $pin = $row['v_bankcode'] == 'BKASH' ? $mainUserData['v_bkash_pin'] : $mainUserData['v_pin'];
         $phoneNumber = $mainUserData['v_phonenumber'];
+        
 
         $res['data'] = array(
-            "username" => $username, "token" => $token, "phonenumber" => $phoneNumber, "bank" => $bank, "userBank" => $userBank, "pin" => $pin
+            "username" => $username, "token" => $token, "phonenumber" => $phoneNumber, "bank" => $bank, "userBank" => $userBank, "pin" => $pin, "emergencyMode" => $emergencyMode
         );
 
         $logDes .= "SUCCESS, token: " . $token . "; ";
