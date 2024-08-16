@@ -74,11 +74,25 @@ try {
     }
     #endregion
 
+    #region get mybank emergency mode
+    $query = "SELECT * FROM mybank WHERE v_bankaccountno = ? AND v_bankcode = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bindValue(1, $accountNo, PDO::PARAM_STR);
+    $stmt->bindValue(2, $bank, PDO::PARAM_STR);
+    $stmt->execute();
+
+    $emergencyMode = 'off';
+    while ($rowMybank = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $emergencyMode = $rowMybank['v_emergencyMode'];
+    }
+    #endregion
+
     $data = $param_POST['data'];
 
     $common->WriteLog($logFile, 'START LOOP ' . count($data) . " DATA");
     foreach ($data as $row) {
 
+        $common->WriteLog($logFile, '-------------');
         $common->WriteLog($logFile, 'DATA : ' . json_encode($row));
         $title = $row['title'];
         $amount = str_replace(" Tk.", "", $row['amount']);
@@ -223,9 +237,11 @@ try {
         $common->WriteLog($logFile, 'TIME : ' . time());
         $common->WriteLog($logFile, 'APPIUM ID : ' . time() . $trxId);
 
+        $appiumId = time() . $trxId;
+
         $query = "INSERT INTO appium_transaction (v_id, v_title, n_amount, v_trxid, d_date, v_account, v_user, v_phonenumber, v_agentaccountno, v_bankcode) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $connAppium->prepare($query);
-        $stmt->bindValue(1, time() . $trxId, PDO::PARAM_STR);
+        $stmt->bindValue(1, $appiumId, PDO::PARAM_STR);
         $stmt->bindValue(2, $title, PDO::PARAM_STR);
         $stmt->bindValue(3, $amount, PDO::PARAM_STR);
         $stmt->bindValue(4, $trxId, PDO::PARAM_STR);
@@ -236,6 +252,11 @@ try {
         $stmt->bindValue(9, $accountNo, PDO::PARAM_STR);
         $stmt->bindValue(10, $bank, PDO::PARAM_STR);
         $stmt->execute();
+
+        if ($emergencyMode != 'off') {
+            $common->WriteLog($logFile, '   EMERGENCY MODE: ' . $emergencyMode . ', NOT RUN AUTO MATCHING');
+            continue;
+        }
 
         #region auto matching
         $common->WriteLog($logFile, '   START AUTO MATCHING');
@@ -251,7 +272,6 @@ try {
         $stmt = $connAppium->prepare($query);
         $stmt->bindValue(1, $amount, PDO::PARAM_STR);
         $stmt->bindValue(2, $trxId, PDO::PARAM_STR);
-        // $stmt->bindValue(3, $account, PDO::PARAM_STR);
         $stmt->execute();
 
         if ($stmt->rowCount() == 0) {
@@ -307,7 +327,30 @@ try {
             $rowTrans = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($rowTrans['v_status'] != 'T') {
                 //bukan order need to check -> abaikan
-                $common->WriteLog($logFile, '   STATUS TRANSACTION ' . $rowTrans['v_status'] . ", NO MATCH");
+                $common->WriteLog($logFile, '   STATUS TRANSACTION ' . $rowTrans['v_status'] . ", JUST UPDATE THE APPIUM");
+
+                #region update appium_transaction
+                $query = "UPDATE appium_transaction SET n_futuretrxid = ? WHERE v_id = ?";
+                $stmt = $connAppium->prepare($query);
+                $stmt->bindValue(1, $rowTrans['n_futuretrxid'], PDO::PARAM_STR);
+                $stmt->bindValue(2, $appiumId, PDO::PARAM_STR);
+                $stmt->execute();
+                $common->WriteLog($logFile, '   UPDATE appium_transaction ID: ' . $appiumId);
+                #endregion
+
+                #region update transaction
+                $dateAppium = date('Y-m-d H:i:s');
+                $query = "UPDATE tbl_transaction SET n_ismatchappium = 1, d_matchappiumdate = '$dateAppium' WHERE n_futuretrxid = ?";
+                $stmt = $connAppium->prepare($query);
+                $stmt->bindValue(1, $rowTrans['n_futuretrxid'], PDO::PARAM_STR);
+                $stmt->execute();
+
+                $query = "UPDATE transaction SET n_ismatchappium = 1, d_matchappiumdate = '$dateAppium' WHERE n_futuretrxid = ?";
+                $stmt = $conn->prepare($query);
+                $stmt->bindValue(1, $rowTrans['n_futuretrxid'], PDO::PARAM_STR);
+                $stmt->execute();
+                #endregion
+
             } else {
 
                 $dateAppium = date('Y-m-d H:i:s');

@@ -13,6 +13,7 @@ include_once "class/auth.php";
 include_once "class/heartbeat.php";
 include_once "class/database.php";
 include_once "config/base.config.php";
+include_once "class/mybank.php";
 
 $common = new Common();
 $log = null;
@@ -32,6 +33,7 @@ try {
 
     $auth = new Auth($conn);
     $heartbeat = new Heartbeat($conn);
+    $mybank = new Mybank($conn);
     $log = new Log($conn);
 
     //validate token-----
@@ -42,9 +44,21 @@ try {
     //------------------------
 
     $username = $userData['v_username'];
+    $mainUser = $userData['v_mainuser'];
+    $bankcode = $userData['v_bankcode'];
+
+    $mainUserData = $auth->GetMainUser($mainUser);
+
+    $resMybank = $mybank->GetAccountByUserAndBank($mainUserData['v_phonenumber'], $bankcode);
+    $emergencyMode = $resMybank["v_emergencyMode"];
+
     $updateHb = $heartbeat->UpdateHeartbeatAppium($username);
 
-    $res = array("status" => "success", "messages" => "");
+    $result['data'] = [
+        'emergencyMode' =>  $emergencyMode
+    ];
+
+    $res = array("status" => "success", "messages" => $result);
 } catch (Exception $e) {
     // $common->WriteLog($logFile, 'ERROR : ' . $e->getMessage());
     $logDesc = "error: " . $e->getMessage() . ", token: " . $token . ($username != "" ? (", username: " . $username) : "");

@@ -48,10 +48,10 @@ try {
         $mybankData = $mybank->GetAccountByUserAndBank($row['v_phonenumber'], strtoupper($bank));
         if (count($mybankData) == 0) throw new Exception('User Bank not found');
 
-        $same = true;
+        $same = false;
         foreach ($mybankData as $rowBank) {
-            if ($userBank != $rowBank['v_bankaccountno']) {
-                $same = false;
+            if ($userBank == $rowBank['v_bankaccountno']) {
+                $same = true;
                 break;
             }
         }

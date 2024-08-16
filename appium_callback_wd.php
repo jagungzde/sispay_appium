@@ -82,8 +82,21 @@ try {
         throw new Exception('Process FAILED. Future Trx Id status already ' . ($wdRow['v_status'] == '0' ? "success" : "failed"));
     }
 
+    $query = "SELECT * FROM tbl_agent_wd_queue WHERE v_queueid = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bindValue(1, $queueId, PDO::PARAM_STR);
+    $stmt->execute();
+
+    $rowQueue = $stmt->fetch(PDO::FETCH_ASSOC);
+
     if ($status == 1) {
-        $query = "UPDATE `transaction` SET v_status = ?, v_memo = ?, d_completedate = ?, n_useappium = 1 WHERE n_futuretrxid = ?";
+
+        $additionalUpdate = '';
+        if ($wdRow['v_accountno'] == '') {
+            $additionalUpdate = ", v_accountno = '" . $rowQeueu['v_bankaccountno'] . "', v_sourceaccountname = '" . $rowQueue['v_bankaccountname'] . "' ";
+        }
+
+        $query = "UPDATE `transaction` SET v_status = ?, v_memo = ?, d_completedate = ?, n_useappium = 1, v_actual_agent = '$user' $additionalUpdate WHERE n_futuretrxid = ?";
         $stmt = $conn->prepare($query);
         $stmt->bindValue(1, $status == 1 ? 0 : 1, PDO::PARAM_STR);
         $stmt->bindValue(2, $description, PDO::PARAM_STR);
@@ -92,7 +105,7 @@ try {
         $stmt->execute();
     } else {
         if ($description != "Insufficient balance. Please check and try again later.") {
-            $query = "UPDATE `transaction` SET v_status = ?, v_memo = ?, d_completedate = ?, n_useappium = 1 WHERE n_futuretrxid = ?";
+            $query = "UPDATE `transaction` SET v_status = ?, v_memo = ?, d_completedate = ?, n_useappium = 1, v_actual_agent = '$user' $additionalUpdate WHERE n_futuretrxid = ?";
             $stmt = $conn->prepare($query);
             $stmt->bindValue(1, $status == 1 ? 0 : 1, PDO::PARAM_STR);
             $stmt->bindValue(2, $description, PDO::PARAM_STR);
