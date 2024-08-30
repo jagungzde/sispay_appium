@@ -52,16 +52,19 @@ try {
     $bank = $param_POST['bank'];
     $balance = str_replace(" Tk.", "", str_replace(",", "", $param_POST['balance']));
     $lastAppiumDate = date('Y-m-d H:i:s');
+    $lastTrxId = $param_POST['lastTrxId'] ?? NULL;
 
     $common->WriteLog($logFile, 'ACCOUNT NO: ' . $accountNo);
     $common->WriteLog($logFile, 'BANK: ' . $bank);
     $common->WriteLog($logFile, 'LAST BALANCE: ' . $balance);
     $common->WriteLog($logFile, 'LAST APPIUM DATE: ' . $lastAppiumDate);
+    $common->WriteLog($logFile, 'LAST TRX ID: ' . $lastTrxId);
 
-    $query = "UPDATE ms_login_appium SET d_lastcrawler = ? WHERE v_token = ?";
+    $query = "UPDATE ms_login_appium SET d_lastcrawler = ?, v_last_trxid = ? WHERE v_token = ?";
     $stmt2 = $conn->prepare($query);
     $stmt2->bindValue(1, $lastAppiumDate, PDO::PARAM_STR);
-    $stmt2->bindValue(2, $token, PDO::PARAM_STR);
+    $stmt2->bindValue(2, $lastTrxId, PDO::PARAM_STR);
+    $stmt2->bindValue(3, $token, PDO::PARAM_STR);
     $stmt2->execute();
 
     if (is_numeric($balance)) {
