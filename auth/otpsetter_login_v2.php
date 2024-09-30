@@ -22,16 +22,16 @@ $pinBkash = !empty($_POST['pinBkash']) ? $_POST['pinBkash'] : $param_POST->pinBk
 
 $logFile = __DIR__ . "/../logs/login_otpsetter_" . date('Y-m-d_H') . ".txt";
 
-if($pin == null || $pin == ''){
+if ($pin == null || $pin == '') {
     $pin = Null;
 }
 
-if($pinBkash == null || $pinBkash == ''){
+if ($pinBkash == null || $pinBkash == '') {
     $pinBkash = Null;
 }
 
 $log = null;
-$logDesc = '';
+$logDes = '';
 $res = null;
 
 try {
@@ -69,7 +69,7 @@ try {
         $token = $common->CreateToken($username);
         $auth->SetTokenOtpSetter($username, $token);
 
-        $auth->SetUserBankPin($username, $bank, $userBank, $pin , $pinBkash);
+        $auth->SetUserBankPinV2($username, $bank, $userBank, $pin, $pinBkash);
 
         $res['data'] = array("username" => $username, "token" => $token, "phonenumber" => $row['v_phonenumber']);
 

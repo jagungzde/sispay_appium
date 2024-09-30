@@ -16,11 +16,12 @@ include_once __DIR__ . '/../class/mybank.php';
 $username = !empty($_POST['username']) ? $_POST['username'] : $param_POST->username;
 $password = !empty($_POST['password']) ? $_POST['password'] : $param_POST->password;
 $serverName = !empty($_POST['serverName']) ? $_POST['serverName'] : $param_POST->serverName;
+$serialNumber = !empty($_POST['serialNumber']) ? $_POST['serialNumber'] : $param_POST->serialNumber;
 
 // $logFile = __DIR__ . "/../logs/login_appium_" . date('Y-m-d_H') . ".txt";
 
 $log = null;
-$logDesc = '';
+$logDes = '';
 $res = null;
 
 try {
@@ -45,6 +46,7 @@ try {
         $token = $common->CreateToken($username);
         $auth->SetTokenAppium($username, $token);
         $auth->SetServerName($serverName, $username);
+        $auth->SetSerialNumber($serialNumber, $username);
 
         $mainUser = $row['v_mainuser'];
 
@@ -63,6 +65,7 @@ try {
         $pin = $row['v_bankcode'] == 'BKASH' ? $mainUserData['v_bkash_pin'] : $mainUserData['v_pin'];
         $phoneNumber = $mainUserData['v_phonenumber'];
         $lastcrawl = $row['d_lastcrawler'];
+        $lastTrxId = $row['v_last_trxid'];
 
 
         $res['data'] = array(
@@ -73,7 +76,8 @@ try {
             "userBank" => $userBank,
             "pin" => $pin,
             "emergencyMode" => $emergencyMode,
-            "lastCrawl" => $lastcrawl
+            "lastCrawl" => $lastcrawl,
+            "lastTrxId" => $lastTrxId
         );
 
         $logDes .= "SUCCESS, token: " . $token . "; ";

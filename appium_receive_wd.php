@@ -17,6 +17,7 @@ $runCode = "111111";    //default runcode
 
 $queueId = $param_POST->queueId;
 
+$common = new Common();
 try {
 
     $database = new Database();
@@ -24,7 +25,6 @@ try {
 
     $transactionCtrl = new TransactionCtrl($conn);
 
-    $common = new Common();
     $token = $common->GetBearerToken();
     if ($token == "") throw new Exception('Invalid Token');
 

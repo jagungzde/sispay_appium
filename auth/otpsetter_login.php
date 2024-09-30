@@ -22,7 +22,7 @@ $pin = !empty($_POST['pin']) ? $_POST['pin'] : $param_POST->pin;
 $logFile = __DIR__ . "/../logs/login_otpsetter_" . date('Y-m-d_H') . ".txt";
 
 $log = null;
-$logDesc = '';
+$logDes = '';
 $res = null;
 
 try {

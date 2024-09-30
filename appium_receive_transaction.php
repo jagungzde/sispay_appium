@@ -18,7 +18,7 @@ $common = new Common();
 $processId = $common->GetRandomString(6);
 
 $logFile = __DIR__ . "/logs/receive_transaction_" . date('Y-m-d_H:00:00') . ".txt";
-$common->WriteLog($logFile, 'POST : ' . json_encode($param_POST));
+$common->WriteLog($logFile, "[$processId] POST : " . json_encode($param_POST));
 
 try {
 
@@ -33,7 +33,7 @@ try {
 
     //validate token-----
     $token = $common->GetBearerToken();
-    $common->WriteLog($logFile, 'TOKEN : ' . $token);
+    $common->WriteLog($logFile, "[$processId] TOKEN : " . $token);
 
     $query = "SELECT A.v_username, B.v_phonenumber FROM ms_login_appium A JOIN ms_login B ON A.v_mainuser = B.v_user WHERE A.v_token = ? AND A.v_system= 'AUTOMATION' ";
     $stmt = $conn->prepare($query);
@@ -54,11 +54,11 @@ try {
     $lastAppiumDate = date('Y-m-d H:i:s');
     $lastTrxId = $param_POST['lastTrxId'] ?? NULL;
 
-    $common->WriteLog($logFile, 'ACCOUNT NO: ' . $accountNo);
-    $common->WriteLog($logFile, 'BANK: ' . $bank);
-    $common->WriteLog($logFile, 'LAST BALANCE: ' . $balance);
-    $common->WriteLog($logFile, 'LAST APPIUM DATE: ' . $lastAppiumDate);
-    $common->WriteLog($logFile, 'LAST TRX ID: ' . $lastTrxId);
+    $common->WriteLog($logFile, '[' . $processId . '] ACCOUNT NO: ' . $accountNo);
+    $common->WriteLog($logFile, '[' . $processId . '] BANK: ' . $bank);
+    $common->WriteLog($logFile, '[' . $processId . '] LAST BALANCE: ' . $balance);
+    $common->WriteLog($logFile, '[' . $processId . '] LAST APPIUM DATE: ' . $lastAppiumDate);
+    $common->WriteLog($logFile, '[' . $processId . '] LAST TRX ID: ' . $lastTrxId);
 
     $query = "UPDATE ms_login_appium SET d_lastcrawler = ?, v_last_trxid = ? WHERE v_token = ?";
     $stmt2 = $conn->prepare($query);
@@ -90,13 +90,13 @@ try {
     }
     #endregion
 
-    $data = $param_POST['data'];
+    $data = isset($param_POST['data']) ? $param_POST['data'] : array();
 
-    $common->WriteLog($logFile, 'START LOOP ' . count($data) . " DATA");
+    $common->WriteLog($logFile, '[' . $processId . '] START LOOP ' . count($data) . " DATA");
     foreach ($data as $row) {
 
-        $common->WriteLog($logFile, '-------------');
-        $common->WriteLog($logFile, 'DATA : ' . json_encode($row));
+        $common->WriteLog($logFile, '[' . $processId . '] -------------');
+        $common->WriteLog($logFile, '[' . $processId . '] DATA : ' . json_encode($row));
         $title = $row['title'];
         $amount = str_replace(" Tk.", "", $row['amount']);
         $amount = str_replace(",", "", $amount);
@@ -223,7 +223,7 @@ try {
             $date = $year . "-" . $month . "-" . $day . " " . $time;
         }
 
-        $common->WriteLog($logFile, 'DATE : ' . $date);
+        $common->WriteLog($logFile, '[' . $processId . '] DATE : ' . $date);
 
 
         $query = "SELECT * FROM appium_transaction WHERE n_amount = ? AND v_trxid = ? AND v_account = ?";
@@ -233,12 +233,12 @@ try {
         $stmt->bindValue(3, $account, PDO::PARAM_STR);
         $stmt->execute();
         if ($stmt->rowCount() > 0) {
-            $common->WriteLog($logFile, 'ALREADY EXISTS ' . $trxId);
+            $common->WriteLog($logFile, '[' . $processId . '] ALREADY EXISTS ' . $trxId);
             continue;
         }
 
-        $common->WriteLog($logFile, 'TIME : ' . time());
-        $common->WriteLog($logFile, 'APPIUM ID : ' . time() . $trxId);
+        $common->WriteLog($logFile, '[' . $processId . '] TIME : ' . time());
+        $common->WriteLog($logFile, '[' . $processId . '] APPIUM ID : ' . time() . $trxId);
 
         $appiumId = time() . $trxId;
 
@@ -257,13 +257,12 @@ try {
         $stmt->execute();
 
         if ($emergencyMode != 'off') {
-            $common->WriteLog($logFile, '   EMERGENCY MODE: ' . $emergencyMode . ', NOT RUN AUTO MATCHING');
+            $common->WriteLog($logFile, '[' . $processId . ']   EMERGENCY MODE: ' . $emergencyMode . ', NOT RUN AUTO MATCHING');
             continue;
         }
 
         #region auto matching
-        $common->WriteLog($logFile, '   START AUTO MATCHING');
-
+        $common->WriteLog($logFile, '[' . $processId . ']   START AUTO MATCHING');
         $query = "SELECT * FROM tbl_transaction WHERE n_amount = ? AND v_notes3 = ? AND v_accountno = '$account'";
         if ($bank == "BKASH") {
 
@@ -271,66 +270,20 @@ try {
             $last = substr($account, -3);
             $query = "SELECT * FROM tbl_transaction WHERE n_amount = ? AND v_notes3 = ? AND v_accountno LIKE '$first%$last'";
         }
-
         $stmt = $connAppium->prepare($query);
         $stmt->bindValue(1, $amount, PDO::PARAM_STR);
         $stmt->bindValue(2, $trxId, PDO::PARAM_STR);
+        // $stmt->bindValue(3, $account, PDO::PARAM_STR);
         $stmt->execute();
 
         if ($stmt->rowCount() == 0) {
             //tidak ada transaction
-            #region check reason not match
-            $common->WriteLog($logFile, '   NO TRANSACTION MATCHED');
-
-            // $query = "SELECT * FROM tbl_transaction WHERE v_notes3 = ?";
-            // $stmt = $connAppium->prepare($query);
-            // $stmt->bindValue(1, $trxId, PDO::PARAM_STR);
-            // $stmt->execute();
-
-            // if ($stmt->rowCount() > 0) {
-            //     $transactionInfo = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            //     $reasonMemo = '';
-            //     if ($transactionInfo['n_amount'] != $amount) $reasonMemo = "AMOUNT ";
-            //     if ($transactionInfo['v_bankcode'] != $bank) {
-            //         if ($reasonMemo != "") $reasonMemo .= "AND ";
-            //         $reasonMemo .= "BANK ";
-            //     }
-            //     if ($bank == 'BKASH') {
-            //         $first = substr($transactionInfo['v_accountno'], 0, 4);
-            //         $last = substr($transactionInfo['v_accountno'], -3);
-
-            //         if ($first . "XXXX" . $last != $account) {
-            //             if ($reasonMemo != "") $reasonMemo .= "AND ";
-            //             $reasonMemo .= "CUSTOMER ACCOUNT ";
-            //         }
-            //     } else {
-            //         if ($transactionInfo['v_accountno'] != $account) {
-            //             if ($reasonMemo != "") $reasonMemo .= "AND ";
-            //             $reasonMemo .= "CUSTOMER ACCOUNT ";
-            //         }
-            //     }
-
-            //     $reasonMemo .= "NOT MATCH";
-
-            //     $query = "UPDATE tbl_transaction SET v_memo = ? WHERE n_futuretrxid = ?";
-            //     $stmt = $connAppium->prepare($query);
-            //     $stmt->bindValue(1, $reasonMemo, PDO::PARAM_STR);
-            //     $stmt->bindValue(2, $transactionInfo['n_futuretrxid'], PDO::PARAM_STR);
-            //     $stmt->execute();
-
-            //     $query = "UPDATE `transaction` SET v_memo = ? WHERE n_futuretrxid = ?";
-            //     $stmt = $conn->prepare($query);
-            //     $stmt->bindValue(1, $reasonMemo, PDO::PARAM_STR);
-            //     $stmt->bindValue(2, $transactionInfo['n_futuretrxid'], PDO::PARAM_STR);
-            //     $stmt->execute();
-            // }
-            #endregion
+            $common->WriteLog($logFile, '[' . $processId . ']   NO TRANSACTION MATCHED');
         } else {
             $rowTrans = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($rowTrans['v_status'] != 'T') {
                 //bukan order need to check -> abaikan
-                $common->WriteLog($logFile, '   STATUS TRANSACTION ' . $rowTrans['v_status'] . ", JUST UPDATE THE APPIUM");
+                $common->WriteLog($logFile, '[' . $processId . ']   STATUS TRANSACTION ' . $rowTrans['v_status'] . ", JUST UPDATE THE APPIUM");
 
                 #region update appium_transaction
                 $query = "UPDATE appium_transaction SET n_futuretrxid = ? WHERE v_id = ?";
@@ -338,7 +291,7 @@ try {
                 $stmt->bindValue(1, $rowTrans['n_futuretrxid'], PDO::PARAM_STR);
                 $stmt->bindValue(2, $appiumId, PDO::PARAM_STR);
                 $stmt->execute();
-                $common->WriteLog($logFile, '   UPDATE appium_transaction ID: ' . $appiumId);
+                $common->WriteLog($logFile, '[' . $processId . ']   UPDATE appium_transaction ID: ' . $appiumId);
                 #endregion
 
                 #region update transaction
@@ -353,13 +306,12 @@ try {
                 $stmt->bindValue(1, $rowTrans['n_futuretrxid'], PDO::PARAM_STR);
                 $stmt->execute();
                 #endregion
-
             } else {
 
                 $dateAppium = date('Y-m-d H:i:s');
 
                 $matchSms = $rowTrans['n_ismatchsms'] == '1' ? true : false;
-                $common->WriteLog($logFile, '   MATCHED WITH ' . $rowTrans['n_futuretrxid']);
+                $common->WriteLog($logFile, '[' . $processId . ']   MATCHED WITH ' . $rowTrans['n_futuretrxid']);
 
                 #region update table baru
                 $query = "UPDATE tbl_transaction SET n_ismatchappium = '1', d_matchappiumdate = '$dateAppium', v_status = '0', d_completedate = '$dateAppium' ";
@@ -372,7 +324,7 @@ try {
                 $stmt = $connAppium->prepare($query);
                 $stmt->bindValue(1, $rowTrans['n_futuretrxid'], PDO::PARAM_STR);
                 $stmt->execute();
-                $common->WriteLog($logFile, '   UPDATE tbl_transaction ' . $rowTrans['n_futuretrxid']);
+                $common->WriteLog($logFile, '[' . $processId . ']   UPDATE tbl_transaction ' . $rowTrans['n_futuretrxid']);
                 #endregion
 
                 #region get actual user
@@ -398,7 +350,7 @@ try {
                 $stmt = $conn->prepare($query);
                 $stmt->bindValue(1, $rowTrans['n_futuretrxid'], PDO::PARAM_STR);
                 $stmt->execute();
-                $common->WriteLog($logFile, '   UPDATE transaction ' . $rowTrans['n_futuretrxid']);
+                $common->WriteLog($logFile, '[' . $processId . ']   UPDATE transaction ' . $rowTrans['n_futuretrxid']);
                 #endregion
 
                 #region update appium_transaction
@@ -409,24 +361,24 @@ try {
                 $stmt->bindValue(3, $trxId, PDO::PARAM_STR);
                 $stmt->bindValue(4, $account, PDO::PARAM_STR);
                 $stmt->execute();
-                $common->WriteLog($logFile, '   UPDATE appium_transaction ');
+                $common->WriteLog($logFile, '[' . $processId . ']   UPDATE appium_transaction ');
                 #endregion
 
                 #region callback
-                $common->WriteLog($logFile, '   START CALLBACK ');
+                $common->WriteLog($logFile, '[' . $processId . ']   START CALLBACK ');
                 $transCtrl = new TransactionCtrl($conn);
                 $callbackResult = $transCtrl->ResendCallback($rowTrans['n_futuretrxid']);
-                $common->WriteLog($logFile, '   CALLBACK : ' . $callbackResult);
+                $common->WriteLog($logFile, '[' . $processId . ']   CALLBACK : ' . $callbackResult);
                 #endregion
             }
         }
         #endregion
     }
-
+    $common->WriteLog($logFile, '[' . $processId . ']==========DONE========');
     $result = array("status" => "success", "messages" => "");
     echo json_encode($result);
 } catch (Exception $e) {
-    $common->WriteLog($logFile, 'ERROR ' . $e->getMessage());
+    $common->WriteLog($logFile, '[' . $processId . '] ERROR ' . $e->getMessage());
     $result = array("status" => "failed", "messages" => $e->getMessage());
     echo json_encode($result);
 }

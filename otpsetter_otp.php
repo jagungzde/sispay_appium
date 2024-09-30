@@ -17,8 +17,8 @@ $common = new Common();
 
 $processId = $common->GetRandomString(6);
 
-$logFile = "otpsetter_otp_" . date('Y-m-d_H:00:00') . ".txt";
-$common->WriteLog($logFile, 'POST : ' . json_encode($param_POST));
+// $logFile = __DIR__ . "/logs/otpsetter_otp_" . date('Y-m-d_H:00:00') . ".txt";
+// $common->WriteLog($logFile, 'POST : ' . json_encode($param_POST));
 
 // $phoneNumber = str_replace("\n", "", trim($param_POST['phoneNumber']));
 $data = $param_POST['data'];
@@ -57,7 +57,7 @@ try {
     $conn = $db->GetConnection();
 
     $token = $common->GetBearerToken();
-    $common->WriteLog($logFile, 'TOKEN : ' . $token);
+    // $common->WriteLog($logFile, 'TOKEN : ' . $token);
 
     $query = "SELECT * FROM ms_login WHERE v_token_otpsetter = ? AND v_active = 'Y'";
     $stmt = $conn->prepare($query);
@@ -79,11 +79,11 @@ try {
         } else if (strpos($sms['body'], "Your bKash verification code is") !== false) {
             $bankCode = 'BKASH';
         } else {
-            $common->WriteLog($logFile, 'Phonenumber : ' . $phoneNumber . ", Id: " . $sms['id'] . " NOT OTP");
+            // $common->WriteLog($logFile, 'Phonenumber : ' . $phoneNumber . ", Id: " . $sms['id'] . " NOT OTP");
             continue;
         }
 
-        $common->WriteLog($logFile, 'BANK : ' . $bankCode . "");
+        // $common->WriteLog($logFile, 'BANK : ' . $bankCode . "");
 
         $query = "SELECT * FROM tbl_otp WHERE v_phonenumber = ? AND n_smsid = ?";
         $stmt = $connAppium->prepare($query);
@@ -92,7 +92,7 @@ try {
         $stmt->execute();
 
         if ($stmt->rowCount() > 0) {
-            $common->WriteLog($logFile, 'Phonenumber : ' . $phoneNumber . ", User: " . $user . ", Id: " . $sms['id'] . " already exists");
+            // $common->WriteLog($logFile, 'Phonenumber : ' . $phoneNumber . ", User: " . $user . ", Id: " . $sms['id'] . " already exists");
             continue;
         }
 
@@ -106,14 +106,14 @@ try {
         $stmt->bindValue(6, $user, PDO::PARAM_STR);
         $stmt->execute();
 
-        $common->WriteLog($logFile, 'Phonenumber : ' . $phoneNumber . ", User: " . $user . ", Id: " . $sms['id'] . " Saved");
+        // $common->WriteLog($logFile, 'Phonenumber : ' . $phoneNumber . ", User: " . $user . ", Id: " . $sms['id'] . " Saved");
 
         #region send mqtt
         $statusMqtt = '';
         $topic = "";
         $content = "";
         try {
-            $common->WriteLog($logFile, "   SEND TO APPIUM");
+            // $common->WriteLog($logFile, "   SEND TO APPIUM");
 
 
             $content = array(
@@ -121,7 +121,7 @@ try {
             );
 
             $encodedContent = json_encode($content);
-            $common->WriteLog($logFile, "   CONTENT: " . $encodedContent);
+            // $common->WriteLog($logFile, "   CONTENT: " . $encodedContent);
             $content = $encodedContent;
 
             $tmpphoneNumber = str_replace("+", "", $phoneNumber);
@@ -133,15 +133,15 @@ try {
                 $topic = "send-otp-appium/" . $tmpphoneNumber . "/BKASH";
             }
 
-            $common->WriteLog($logFile, "   TOPIC: " . $topic);
+            // $common->WriteLog($logFile, "   TOPIC: " . $topic);
             // MqttPublish($topic, $encodedContent);
             MqttPublish($topic, '[' . $sms['body'] . ']');
-            $common->WriteLog($logFile, "   SEND TO MQTT SUCCESS");
+            // $common->WriteLog($logFile, "   SEND TO MQTT SUCCESS");
 
 
             $statusMqtt = 'SEND TO MQTT SUCCESS';
         } catch (Exception $ex) {
-            $common->WriteLog($logFile, "   SEND TO MQTT FAILED: " . $ex->getMessage());
+            // $common->WriteLog($logFile, "   SEND TO MQTT FAILED: " . $ex->getMessage());
             $statusMqtt = 'SEND TO MQTT FAILED: ' . $ex->getMessage();
         }
 
@@ -159,7 +159,7 @@ try {
 
     echo json_encode(array("status" => "success"));
 } catch (Exception $e) {
-    $common->WriteLog($logFile, 'ERROR : ' . $e->getMessage());
+    // $common->WriteLog($logFile, 'ERROR : ' . $e->getMessage());
 
     echo json_encode(array("status" => "failed", "messages" => $e->getMessage()));
 }

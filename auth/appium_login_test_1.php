@@ -17,10 +17,11 @@ $username = !empty($_POST['username']) ? $_POST['username'] : $param_POST->usern
 $password = !empty($_POST['password']) ? $_POST['password'] : $param_POST->password;
 $serverName = !empty($_POST['serverName']) ? $_POST['serverName'] : $param_POST->serverName;
 
+
 // $logFile = __DIR__ . "/../logs/login_appium_" . date('Y-m-d_H') . ".txt";
 
 $log = null;
-$logDesc = '';
+$logDes = '';
 $res = null;
 
 try {
@@ -45,6 +46,7 @@ try {
         $token = $common->CreateToken($username);
         $auth->SetTokenAppium($username, $token);
         $auth->SetServerName($serverName, $username);
+
 
         $mainUser = $row['v_mainuser'];
 
