@@ -17,13 +17,12 @@ $bank = !empty($_POST['bank']) ? $_POST['bank'] : $param_POST->bank;
 $description = !empty($_POST['description']) ? $_POST['description'] : $param_POST->description;
 
 $logFile = "./logs/status_appium_" . date('Y-m-d_H') . ".txt";
+$common = new Common();
 
 try {
 
     $database = new Database();
     $conn = $database->GetConnection();
-
-    $common = new Common();
     $common->WriteLog($logFile, '========START========');
 
     $token = $common->GetBearerToken();

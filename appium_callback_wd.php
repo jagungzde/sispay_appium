@@ -29,14 +29,19 @@ try {
         "Insufficient balance. Please check and try again later.",
         "AUTOMATION FAILED: TIME OUT",
         "AUTOMATION FAILED: UNKNOWN ERROR",
-        "Maximum Cash In Credit Monthly Amount",
+        "AUTOMATION FAILED: FINAL STEP",
+        "AUTOMATION FAILED: CHECKING HISTORY",
+        "FINISHED CHECKING HISTORY",
         "Your request is restricted from 2 AM till 4 AM. Please try later. Thanks.",
         "Same transaction request. Please try again later.",
-        "Maximum Cash In Credit Daily Count",
         "Your session expired. Please login again.",
         "An exception occurred, Try again",
-        "Insufficient balance"
+        "Insufficient balance",
+        "App could not connect with server. Please check your internet connection and try again later.",
+        "Please check your internet connection and try again later.",
+        "An error occurred"
     ];
+
 
     $database = new Database();
     $conn = $database->GetConnection();
@@ -53,8 +58,7 @@ try {
     $common->WriteLog($logFile, "[$runCode] ========START========");
 
     $common->WriteLog($logFile, "[$runCode] PARAMS: " . json_encode($param_POST));
-
-    $query = "SELECT A.v_username, B.v_phonenumber FROM ms_login_appium A JOIN ms_login B ON A.v_mainuser = B.v_user WHERE A.v_token = ? ";
+    $query = "SELECT A.v_username, B.v_phonenumber, A.v_mainuser FROM ms_login_appium A JOIN ms_login B ON A.v_mainuser = B.v_user WHERE A.v_token = ? ";
     $stmt = $conn->prepare($query);
     $stmt->bindValue(1, $token, PDO::PARAM_STR);
     $stmt->execute();
@@ -65,6 +69,7 @@ try {
     else {
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $user = $row['v_username'];
+            $mainUser = $row['v_mainuser'];
             $phonenumber = $row['v_phonenumber'];
         }
     }
@@ -110,7 +115,7 @@ try {
             $additionalUpdate = ", v_accountno = '" . $rowQueue['v_bankaccountno'] . "', v_sourceaccountname = '" . $rowQueue['v_bankaccountname'] . "' ";
         }
 
-        $query = "UPDATE `transaction` SET v_status = ?, v_memo = ?, d_completedate = ?, n_useappium = 1, v_actual_agent = '$user' $additionalUpdate WHERE n_futuretrxid = ?";
+        $query = "UPDATE `transaction` SET v_status = ?, v_memo = ?, d_completedate = ?, n_useappium = 1, v_actual_agent = '$mainUser' $additionalUpdate WHERE n_futuretrxid = ?";
         $stmt = $conn->prepare($query);
         $stmt->bindValue(1, $status == 1 ? 0 : 1, PDO::PARAM_STR);
         $stmt->bindValue(2, $description, PDO::PARAM_STR);
@@ -155,6 +160,14 @@ try {
         $stmt->bindValue(2, $queueId, PDO::PARAM_STR);
         $stmt->execute();
         $next = true;
+
+        if ($rowQueue['d_processtime'] == NULL || $rowQueue['d_processtime'] == '') {
+            $query = "UPDATE tbl_agent_wd_queue SET d_processtime = ? WHERE v_queueid = ?";
+            $stmt = $conn->prepare($query);
+            $stmt->bindValue(1, date('Y-m-d H:i:s'), PDO::PARAM_STR);
+            $stmt->bindValue(2, $queueId, PDO::PARAM_STR);
+            $stmt->execute();
+        }
 
         #region set agent not used in available account
         /**
@@ -249,7 +262,7 @@ try {
             $common->WriteLog($logFile, "[$runCode] MERCHANT CALLBACK ERROR: " . $ex->getMessage());
         }
     } else {
-        if ($description != "Insufficient balance. Please check and try again later." && $description != "AUTOMATION FAILED: TIME OUT" && $description != "AUTOMATION FAILED: UNKNOWN ERROR") {
+        if (!in_array($description, $invalid_description)) {
             try {
                 $merchantCallback = $transactionCtrl->ResendCallback($futureTrxId);
                 $common->WriteLog($logFile, "[$runCode] MERCHANT CALLBACK STATUS: " . $merchantCallback);
@@ -259,7 +272,7 @@ try {
         }
     }
 
-    if ($description == 'Maximum Cash In Credit Monthly Amount' || $description == 'Maximum Cash In Credit Daily Count') {
+    if ($description == 'Maximum Cash In Credit Daily Count') {
         try {
             $queryUpdate = "UPDATE mybank SET v_isactive = 'N' WHERE v_bankaccountno = ? AND v_bankcode = ?";
             $stmt = $conn->prepare($queryUpdate);
@@ -272,6 +285,13 @@ try {
             throw $e->getMessage();
         }
     }
+
+    $UpdateStatusQuery = "UPDATE ms_login_appium SET n_status = 3, v_status_desc = 'Not Ready' WHERE v_mainuser = ? AND v_bankcode = ? AND v_system = 'AUTOMATION'";
+    $UpdateStatusStmt = $conn->prepare($UpdateStatusQuery);
+    $UpdateStatusStmt->bindValue(1, $user, PDO::PARAM_STR);
+    $UpdateStatusStmt->bindValue(2, $wdRow['v_bankcode'], PDO::PARAM_STR);
+    $UpdateStatusStmt->execute();
+
 
     $common->WriteLog($logFile, "[$runCode] ========END========");
 

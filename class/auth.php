@@ -124,7 +124,27 @@ class Auth
         }
     }
 
-    public function SetUserBankPin($username, $bank, $userBank, $pin = null, $pinBkash = null)
+    public function SetUserBankPin($username, $bank, $userBank, $pin)
+    {
+        try {
+            if (empty($username)) throw new Exception('Invalid Username');
+
+            $query = "UPDATE ms_login SET v_bank = ?, v_userbank =?, v_pin = ? WHERE v_user = ?";
+
+            $stmt = $this->connection->prepare($query);
+            $stmt->bindValue(1, $bank, PDO::PARAM_STR);
+            $stmt->bindValue(2, $userBank, PDO::PARAM_STR);
+            $stmt->bindValue(3, $pin, PDO::PARAM_STR);
+            $stmt->bindValue(4, $username, PDO::PARAM_STR);
+            $stmt->execute();
+
+            $stmt = null;
+        } catch (Exception $e) {
+            throw $e;
+        }
+    }
+
+    public function SetUserBankPinV2($username, $bank, $userBank, $pin = null, $pinBkash = null)
     {
         try {
             if (empty($username)) throw new Exception('Invalid Username');
@@ -162,9 +182,9 @@ class Auth
         }
     }
 
-    public function SetServerName($serverName, $username)
+    public function SetServerName($serverName = null, $username)
     {
-        try{
+        try {
             $query = "UPDATE ms_login_appium SET v_servername = ? WHERE v_username = ?";
             $stmt = $this->connection->prepare($query);
             $stmt->bindValue(1, $serverName, PDO::PARAM_STR);
@@ -172,7 +192,22 @@ class Auth
             $stmt->execute();
 
             $stmt = null;
-        }catch(Exception $e){
+        } catch (Exception $e) {
+            throw $e;
+        }
+    }
+
+    public function setSerialNumber($serialNumber = null, $username)
+    {
+        try {
+            $query = "UPDATE ms_login_appium SET v_serialnumber = ? WHERE v_username = ?";
+            $stmt = $this->connection->prepare($query);
+            $stmt->bindValue(1, $serialNumber, PDO::PARAM_STR);
+            $stmt->bindValue(2, $username, PDO::PARAM_STR);
+            $stmt->execute();
+
+            $stmt = null;
+        } catch (Exception $e) {
             throw $e;
         }
     }
