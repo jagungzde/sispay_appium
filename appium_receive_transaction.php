@@ -98,6 +98,9 @@ try {
         $common->WriteLog($logFile, '-------------');
         $common->WriteLog($logFile, 'DATA : ' . json_encode($row));
         $title = $row['title'];
+
+        if ($title == 'Cash In') continue;
+
         $amount = str_replace(" Tk.", "", $row['amount']);
         $amount = str_replace(",", "", $amount);
 
@@ -261,20 +264,25 @@ try {
             continue;
         }
 
+        if ($title == 'Cash In') {
+            $common->WriteLog($logFile, '   CASH IN TRANSACTION NO NEED TO MATCH');
+            continue;
+        }
+
         #region auto matching
         $common->WriteLog($logFile, '   START AUTO MATCHING');
 
-        $query = "SELECT * FROM tbl_transaction WHERE n_amount = ? AND v_notes3 = ? AND v_accountno = '$account'";
+        $query = "SELECT * FROM tbl_transaction WHERE n_amount = ? AND v_notes3 = '$trxId' AND v_accountno = '$account'";
         if ($bank == "BKASH") {
 
             $first = substr($account, 0, 4);
             $last = substr($account, -3);
-            $query = "SELECT * FROM tbl_transaction WHERE n_amount = ? AND v_notes3 = ? AND v_accountno LIKE '$first%$last'";
+            $query = "SELECT * FROM tbl_transaction WHERE n_amount = ? AND v_notes3 = '$trxId' AND v_accountno LIKE '$first%$last'";
         }
 
         $stmt = $connAppium->prepare($query);
         $stmt->bindValue(1, $amount, PDO::PARAM_STR);
-        $stmt->bindValue(2, $trxId, PDO::PARAM_STR);
+        // $stmt->bindValue(2, $trxId, PDO::PARAM_STR);
         $stmt->execute();
 
         if ($stmt->rowCount() == 0) {
@@ -402,12 +410,10 @@ try {
                 #endregion
 
                 #region update appium_transaction
-                $query = "UPDATE appium_transaction SET n_futuretrxid = ? WHERE n_amount =? AND v_trxid = ? AND v_account = ?";
+                $query = "UPDATE appium_transaction SET n_futuretrxid = ? WHERE v_id = ?";
                 $stmt = $connAppium->prepare($query);
                 $stmt->bindValue(1, $rowTrans['n_futuretrxid'], PDO::PARAM_STR);
-                $stmt->bindValue(2, $amount, PDO::PARAM_STR);
-                $stmt->bindValue(3, $trxId, PDO::PARAM_STR);
-                $stmt->bindValue(4, $account, PDO::PARAM_STR);
+                $stmt->bindValue(2, $appiumId, PDO::PARAM_STR);
                 $stmt->execute();
                 $common->WriteLog($logFile, '   UPDATE appium_transaction ');
                 #endregion

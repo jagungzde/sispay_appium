@@ -107,7 +107,7 @@ try {
 
         $additionalUpdate = '';
         if ($wdRow['v_accountno'] == '') {
-            $additionalUpdate = ", v_accountno = '" . $rowQeueu['v_bankaccountno'] . "', v_sourceaccountname = '" . $rowQueue['v_bankaccountname'] . "' ";
+            $additionalUpdate = ", v_accountno = '" . $rowQueue['v_bankaccountno'] . "', v_sourceaccountname = '" . $rowQueue['v_bankaccountname'] . "' ";
         }
 
         $query = "UPDATE `transaction` SET v_status = ?, v_memo = ?, d_completedate = ?, n_useappium = 1, v_actual_agent = '$user' $additionalUpdate WHERE n_futuretrxid = ?";
@@ -177,6 +177,39 @@ try {
             $stmt->bindValue(2, $rowQueue['v_bankaccountno'], PDO::PARAM_STR);
             $stmt->execute();
         }
+        #endregion
+
+        #region check adjustment out 
+        /**
+         * @author Rusman.
+         * @since 2024-12-09
+         * 
+         */
+        $query = "SELECT * FROM tbl_agent_credit_adjustment WHERE v_note = ? AND v_type = 'OUT'";
+        $stmt = $conn->prepare($query);
+        $stmt->bindValue(1, $futureTrxId, PDO::PARAM_STR);
+        $stmt->execute();
+
+        while ($rowAdj = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            //jika ada adj out maka di buat adj in
+
+            $query = "INSERT INTO tbl_agent_credit_adjustment (d_insert, v_user, v_type, n_amount, v_adjustByUser, v_bankaccountno, v_bankcode, v_note, v_sourcetype, n_commissionsettlementid, n_purposeId) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $stmt2 = $conn->prepare($query);
+            $stmt2->bindValue(1, date('Y-m-d H:i:s'), PDO::PARAM_STR);
+            $stmt2->bindValue(2, $rowAdj['v_user'], PDO::PARAM_STR);
+            $stmt2->bindValue(3, 'IN', PDO::PARAM_STR);
+            $stmt2->bindValue(4, $rowAdj['n_amount'], PDO::PARAM_STR);
+            $stmt2->bindValue(5, $rowAdj['v_adjustByUser'], PDO::PARAM_STR);
+            $stmt2->bindValue(6, $rowAdj['v_bankaccountno'], PDO::PARAM_STR);
+            $stmt2->bindValue(7, $rowAdj['v_bankcode'], PDO::PARAM_STR);
+            $stmt2->bindValue(8, $rowAdj['v_note'], PDO::PARAM_STR);
+            $stmt2->bindValue(9, $rowAdj['v_sourcetype'], PDO::PARAM_STR);
+            $stmt2->bindValue(10, $rowAdj['n_commissionsettlementid'], PDO::PARAM_STR);
+            $stmt2->bindValue(11, $rowAdj['n_purposeId'], PDO::PARAM_STR);
+            $stmt2->execute();
+        }
+
         #endregion
     }
 
