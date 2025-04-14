@@ -263,17 +263,17 @@ try {
 
         #region auto matching
         $common->WriteLog($logFile, '[' . $processId . ']   START AUTO MATCHING');
-        $query = "SELECT * FROM tbl_transaction WHERE n_amount = ? AND v_notes3 = ? AND v_accountno = '$account'";
+        $query = "SELECT * FROM tbl_transaction WHERE n_amount = ? AND v_notes3 = ? AND v_accountno = '$account' AND v_bankcode = ?";
         if ($bank == "BKASH") {
 
             $first = substr($account, 0, 4);
             $last = substr($account, -3);
-            $query = "SELECT * FROM tbl_transaction WHERE n_amount = ? AND v_notes3 = ? AND v_accountno LIKE '$first%$last'";
+            $query = "SELECT * FROM tbl_transaction WHERE n_amount = ? AND v_notes3 = ? AND v_accountno LIKE '$first%$last' AND v_bankcode = ?";
         }
         $stmt = $connAppium->prepare($query);
         $stmt->bindValue(1, $amount, PDO::PARAM_STR);
         $stmt->bindValue(2, $trxId, PDO::PARAM_STR);
-        // $stmt->bindValue(3, $account, PDO::PARAM_STR);
+        $stmt->bindValue(3, $bank, PDO::PARAM_STR);
         $stmt->execute();
 
         if ($stmt->rowCount() == 0) {
